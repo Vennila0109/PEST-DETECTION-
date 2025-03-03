@@ -1,0 +1,72 @@
+import numpy as np
+import streamlit as st
+import cv2
+from keras.models import load_model
+
+# Loading the Model
+model = load_model('model.H5')
+
+# Name of Classes
+CLASS_NAMES = [
+    "incertulas",
+    "yelow"
+]
+
+# Pesticide recommendations for each class
+PESTICIDE_RECOMMENDATIONS = {
+    "incertulas": "Pesticides: Chlorantraniliprole, Emamectin benzoate, Indoxacarb",
+    "yelow": "Buprofezin, Fipronil, Thiamethoxam"
+}
+
+# Login Page
+def login():
+    st.title("Login Page")
+    username = st.sidebar.text_input("Username")
+    password = st.sidebar.text_input("Password", type="password")
+    if st.sidebar.button("Login"):
+        if username == "vennila" and password == "0109":
+            st.sidebar.success("Logged in as {}".format(username))
+            home()
+        else:
+            st.sidebar.error("Incorrect username or password")
+    return False
+
+# Home Page
+def home():
+    st.title("Pest Disease Classifier")
+    st.markdown("Upload an image ")
+
+# Uploading the image
+    uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+# On predict button click
+    if uploaded_image is not None:
+    # Convert the file to an opencv image.
+        file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
+        opencv_image = cv2.imdecode(file_bytes, 1)
+
+        # Display the image
+        st.image(opencv_image, channels="BGR", caption='Uploaded Image')
+
+        # Preprocess the image
+        resized_image = cv2.resize(opencv_image, (200, 200))  # Resize to the appropriate input size of the model
+        resized_image = resized_image / 255.0  # Normalize the image
+
+        # Make prediction
+        prediction = model.predict(np.expand_dims(resized_image, axis=0))[0]
+
+        # Display the result
+        predicted_class_index = np.argmax(prediction)
+        predicted_class = CLASS_NAMES[predicted_class_index]
+        confidence = prediction[predicted_class_index]
+
+        # Get pesticide recommendations
+        pesticide_recommendation = PESTICIDE_RECOMMENDATIONS.get(predicted_class, "No recommendation available")
+
+    if st.button("Disease"):
+        st.write(f"Predicted Disease: {predicted_class} (Confidence: {confidence:.2f})")
+
+    if st.button("Remedies"):
+        st.write(f"Recommended Pesticide(s): {pesticide_recommendation}")
+login()
+home()
